@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PA catheter rounds</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-page:#0A0D0E;
+    --panel:#12181A;
+    --panel-2:#161D1F;
+    --border:#243030;
+    --border-soft:#1B2426;
+    --text-primary:#E9EFEA;
+    --text-dim:#7E9088;
+    --text-faint:#4B5B56;
+    --ra:#4FC3E8;
+    --rv:#3FD98A;
+    --pa:#F0A93B;
+    --wedge:#E37FB0;
+    --good:#3FD98A;
+    --bad:#E85D5D;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  .app{
+    background:var(--bg-page);
+    color:var(--text-primary);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:32px 20px 64px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin:0 0 8px;
+  }
+  h1{
+    font-family:var(--mono);
+    font-weight:500;
+    font-size:26px;
+    letter-spacing:-0.01em;
+    margin:0 0 6px;
+  }
+  .sub{color:var(--text-dim);font-size:14.5px;line-height:1.55;margin:0 0 24px;max-width:52ch;}
+  .completion{
+    font-family:var(--mono);font-size:12px;color:var(--text-dim);
+    display:flex;align-items:center;gap:8px;margin-bottom:28px;
+  }
+  .completion .bar{flex:1;height:2px;background:var(--border-soft);position:relative;}
+  .completion .bar-fill{position:absolute;left:0;top:0;height:100%;background:var(--rv);transition:width .4s ease;}
+  #resetBtn{
+    font-family:var(--mono);font-size:11px;color:var(--text-faint);background:none;border:0.5px solid var(--border);
+    padding:3px 8px;border-radius:4px;cursor:pointer;
+  }
+  #resetBtn:hover{color:var(--text-dim);border-color:var(--text-faint);}
+
+  .stations{display:flex;align-items:center;margin-bottom:36px;position:relative;}
+  .station{
+    display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;cursor:pointer;position:relative;z-index:1;
+  }
+  .station.locked{cursor:not-allowed;}
+  .node{
+    width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:var(--panel);
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--text-faint);
+    transition:all .2s ease;
+  }
+  .station.done .node{background:var(--rv);border-color:var(--rv);color:#04231A;}
+  .station.current .node{border-color:var(--pa);color:var(--pa);}
+  .station.locked .node{color:var(--text-faint);}
+  .station.content .node{border-color:var(--ra);}
+  .station.content.done .node{background:var(--ra);border-color:var(--ra);color:#04231A;}
+  .station-label{font-family:var(--mono);font-size:10px;color:var(--text-faint);text-align:center;max-width:80px;line-height:1.3;}
+  .station.done .station-label,.station.current .station-label{color:var(--text-dim);}
+  .connector{position:absolute;top:13px;left:0;right:0;height:1px;background:var(--border-soft);z-index:0;}
+
+  .card{
+    background:var(--panel);border:0.5px solid var(--border-soft);border-radius:8px;padding:24px 26px;margin-bottom:20px;
+  }
+  .case-tag{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--pa);border:0.5px solid var(--pa);border-radius:4px;padding:3px 8px;margin-bottom:14px;
+  }
+  .case-tag.content-tag{color:var(--ra);border-color:var(--ra);}
+  .case-title{font-size:17px;font-weight:600;margin:0 0 10px;}
+  .vignette{font-size:14.5px;line-height:1.65;color:var(--text-primary);margin:0 0 18px;}
+  .vignette b{color:var(--text-primary);font-weight:600;}
+
+  .waveform-box{background:var(--panel-2);border:0.5px solid var(--border-soft);border-radius:6px;padding:14px 16px 8px;margin-bottom:18px;}
+  .waveform-box .wlabel{font-family:var(--mono);font-size:10px;color:var(--text-faint);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+  .waveform-box svg{display:block;width:100%;height:auto;}
+
+  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--border-soft);border:0.5px solid var(--border-soft);border-radius:6px;overflow:hidden;margin-bottom:18px;}
+  .data-cell{background:var(--panel-2);padding:10px 12px;}
+  .data-cell .dlabel{font-family:var(--mono);font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+  .data-cell .dval{font-family:var(--mono);font-size:15px;color:var(--text-primary);}
+
+  .qblock{margin-bottom:16px;}
+  .qtext{font-size:14px;font-weight:600;margin-bottom:10px;}
+  .options{display:flex;flex-direction:column;gap:8px;}
+  .opt{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:6px;
+    cursor:pointer;font-size:13.5px;transition:border-color .15s ease,background .15s ease;
+  }
+  .opt:hover{border-color:var(--text-faint);}
+  .opt input{accent-color:var(--pa);}
+  .opt.correct{border-color:var(--good);background:rgba(63,217,138,0.08);}
+  .opt.incorrect{border-color:var(--bad);background:rgba(232,93,93,0.08);}
+  .opt.disabled{cursor:default;}
+
+  .checkBtn{
+    font-family:var(--mono);font-size:12.5px;color:var(--bg-page);background:var(--pa);border:none;border-radius:5px;
+    padding:9px 16px;cursor:pointer;margin-top:4px;
+  }
+  .checkBtn:hover{opacity:0.9;}
+  .checkBtn:disabled{opacity:0.35;cursor:not-allowed;}
+
+  .feedback{
+    margin-top:14px;padding:12px 14px;border-radius:6px;font-size:13.5px;line-height:1.6;display:none;
+  }
+  .feedback.show{display:block;}
+  .feedback.good{background:rgba(63,217,138,0.08);border:0.5px solid var(--good);}
+  .feedback.bad{background:rgba(232,93,93,0.08);border:0.5px solid var(--bad);}
+  .feedback b{display:block;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+  .feedback.good b{color:var(--good);}
+  .feedback.bad b{color:var(--bad);}
+
+  .nextBtn{
+    font-family:var(--mono);font-size:12.5px;color:var(--text-primary);background:none;border:0.5px solid var(--text-dim);
+    border-radius:5px;padding:9px 16px;cursor:pointer;margin-top:18px;display:none;
+  }
+  .nextBtn.show{display:inline-block;}
+  .nextBtn:hover{border-color:var(--text-primary);}
+
+  .locked-card{padding:22px 26px;text-align:center;color:var(--text-faint);}
+  .locked-card .lt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;color:var(--text-dim);}
+  .locked-card .ld{font-size:13px;}
+
+  /* ---- content-page (slide deck) styles ---- */
+  .slide-heading{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin:0 0 14px;}
+  .slide-heading.slide-heading-lg{font-family:var(--sans);font-size:18px;font-weight:600;letter-spacing:normal;text-transform:none;color:var(--text-primary);margin:0 0 16px;}
+  .bullet-list{list-style:none;padding:0;margin:0 0 4px;min-height:120px;}
+  .bullet-list:has(+ .numbered-list){min-height:0;}
+  .bullet-list li{position:relative;padding-left:20px;margin-bottom:14px;font-size:14.5px;line-height:1.65;color:var(--text-primary);}
+  .bullet-list li:before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--ra);}
+  .bullet-list b{color:var(--text-primary);font-weight:600;}
+  .numbered-list{list-style:none;counter-reset:num;padding:0;margin:0 0 4px;}
+  .numbered-list li{counter-increment:num;position:relative;padding-left:26px;margin-bottom:14px;font-size:14.5px;line-height:1.65;color:var(--text-primary);}
+  .numbered-list li:before{content:counter(num) ")";position:absolute;left:0;top:0;font-family:var(--mono);font-weight:600;color:var(--ra);}
+  .numbered-list b{color:var(--text-primary);font-weight:600;}
+  .mnemonic-box{background:rgba(240,169,59,0.07);border:0.5px solid var(--pa);border-radius:6px;padding:14px 16px;font-size:13.5px;line-height:1.6;color:var(--text-primary);margin-top:2px;margin-bottom:4px;}
+
+  .slide-dots{display:flex;gap:6px;margin:20px 0 0;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s ease;}
+  .dot.active{background:var(--ra);width:18px;border-radius:3px;}
+  .dot.past{background:var(--text-faint);}
+
+  .slide-nav{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+  .slide-btn{
+    font-family:var(--mono);font-size:12.5px;color:var(--text-primary);background:none;border:0.5px solid var(--text-dim);
+    border-radius:5px;padding:9px 16px;cursor:pointer;
+  }
+  .slide-btn:hover{border-color:var(--text-primary);}
+  .slide-btn:disabled{opacity:.3;cursor:not-allowed;}
+  .slide-btn.primary{background:var(--ra);color:var(--bg-page);border:none;}
+  .slide-btn.primary:hover{opacity:.9;}
+  .slide-counter{font-family:var(--mono);font-size:11px;color:var(--text-faint);}
+
+  .qdivider{border:none;border-top:0.5px solid var(--border-soft);margin:22px 0;}
+  .qlabel{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ra);margin:0 0 8px;}
+
+  .order-pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .order-chip{
+    font-family:var(--mono);font-size:12.5px;padding:8px 12px;border:0.5px solid var(--border);border-radius:6px;
+    cursor:pointer;color:var(--text-primary);background:var(--panel-2);transition:all .15s ease;
+  }
+  .order-chip:hover{border-color:var(--text-faint);}
+  .order-chip.picked{opacity:.25;cursor:default;pointer-events:none;}
+  .order-sequence{
+    display:flex;flex-wrap:wrap;gap:8px;min-height:44px;padding:10px;border:0.5px dashed var(--border);
+    border-radius:6px;margin-bottom:10px;align-items:center;
+  }
+  .order-sequence:empty:before{content:'Tap items above, in order, to build your sequence.';font-family:var(--mono);font-size:11px;color:var(--text-faint);}
+  .order-slot{
+    font-family:var(--mono);font-size:12.5px;padding:7px 11px;border-radius:5px;background:var(--panel-2);
+    border:0.5px solid var(--border-soft);display:flex;align-items:center;gap:7px;cursor:pointer;
+  }
+  .order-slot .num{color:var(--ra);font-weight:600;}
+  .order-slot.correct{border-color:var(--good);background:rgba(63,217,138,0.08);}
+  .order-slot.incorrect{border-color:var(--bad);background:rgba(232,93,93,0.08);}
+  .order-slot.locked{cursor:default;}
+  .clearBtn{
+    font-family:var(--mono);font-size:11px;color:var(--text-faint);background:none;border:0.5px solid var(--border);
+    border-radius:4px;padding:4px 9px;cursor:pointer;margin-bottom:14px;
+  }
+  .clearBtn:hover{color:var(--text-dim);}
+  .clearBtn:disabled{opacity:.3;cursor:not-allowed;}
+
+  .continueBtn{
+    font-family:var(--mono);font-size:12.5px;color:var(--bg-page);background:var(--ra);border:none;border-radius:5px;
+    padding:9px 16px;cursor:pointer;margin-top:20px;display:none;
+  }
+  .continueBtn.show{display:inline-block;}
+  .continueBtn:hover{opacity:.9;}
+
+  /* ---- learner ID gate ---- */
+  .gate{
+    position:fixed;inset:0;background:var(--bg-page);display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:100;
+  }
+  .gate-card{max-width:420px;width:100%;}
+  .gate-card .eyebrow{margin-bottom:8px;}
+  .gate-card h1{margin-bottom:10px;}
+  .gate-card .sub{max-width:none;margin-bottom:24px;}
+  .gate-label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);margin:0 0 8px;}
+  .gate-input{
+    width:100%;font-family:var(--sans);font-size:15px;color:var(--text-primary);background:var(--panel-2);
+    border:0.5px solid var(--border);border-radius:6px;padding:11px 13px;margin-bottom:6px;
+  }
+  .gate-input:focus{outline:none;border-color:var(--ra);}
+  .gate-error{font-family:var(--mono);font-size:11.5px;color:var(--bad);min-height:16px;margin:0 0 14px;}
+  .gate-btn{
+    font-family:var(--mono);font-size:13px;color:var(--bg-page);background:var(--ra);border:none;border-radius:6px;
+    padding:11px 18px;cursor:pointer;width:100%;
+  }
+  .gate-btn:hover{opacity:.9;}
+
+  /* ---- thank-you screen ---- */
+  .thankyou-card{text-align:center;padding:44px 26px;}
+  .thankyou-title{font-size:20px;font-weight:600;margin:0 0 14px;color:var(--text-primary);}
+  .thankyou-sub{font-size:13px;line-height:1.65;color:var(--text-dim);max-width:44ch;margin:0 auto;}
+  .thankyou-sub a{color:var(--ra);text-decoration:none;}
+  .thankyou-sub a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="gate" id="gateScreen">
+  <div class="gate-card">
+    <p class="eyebrow">CCU prep &middot; asynchronous module</p>
+    <h1>PA catheter rounds</h1>
+    <p class="sub">Enter your name to begin. This just lets us see who's completed the module before rotation — it isn't graded.</p>
+    <p class="gate-label">Your name</p>
+    <input type="text" class="gate-input" id="learnerIdInput" placeholder="e.g. Jane Smith" autocomplete="name">
+    <p class="gate-error" id="gateError"></p>
+    <button class="gate-btn" id="gateStartBtn">Start module →</button>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none;">
+  <div class="wrap">
+    <p class="eyebrow">CCU prep &middot; asynchronous module</p>
+    <h1>PA catheter rounds</h1>
+    <p class="sub">Start with the fundamentals, then work through six cases spanning hemodynamic interpretation and management decisions. Move through them in order — each one builds on the last.</p>
+
+    <div class="completion">
+      <span id="completionText">0 / 9 complete</span>
+      <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+      <button id="resetBtn">reset progress</button>
+    </div>
+
+    <div class="stations" id="stations"></div>
+
+    <div id="caseArea"></div>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   GOOGLE FORM RESPONSE CAPTURE
+   Fill in GOOGLE_FORM_ACTION and the entry IDs below once you've built
+   your Google Form. See chat for the step-by-step walkthrough on how to
+   find these values. Until GOOGLE_FORM_ACTION is filled in, submissions
+   are silently skipped (no errors) so you can keep testing the module.
+   ====================================================================== */
+const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSfb_SWFbm6XPkMD51SZnJAJHqCWxNfFnJgAKD8zOOl8cAiRyw/formResponse';
+const GOOGLE_FORM_ENTRIES = {
+  learnerId: 'entry.746340694',
+  item:      'entry.1135356400',
+  question:  'entry.1936154135',
+  answer:    'entry.1484319604',
+  correct:   'entry.68651550',
+  timestamp: 'entry.1104254545'
+};
+
+function googleFormReady(){
+  return GOOGLE_FORM_ACTION.startsWith('http') &&
+    Object.values(GOOGLE_FORM_ENTRIES).every(v => v.startsWith('entry.'));
+}
+
+function submitToGoogleForm({ item, question, answer, correct }){
+  if(!googleFormReady()) return; // not configured yet — skip quietly
+  const params = new URLSearchParams();
+  params.append(GOOGLE_FORM_ENTRIES.learnerId, learnerId || 'unknown');
+  params.append(GOOGLE_FORM_ENTRIES.item, item || '');
+  params.append(GOOGLE_FORM_ENTRIES.question, question || '');
+  params.append(GOOGLE_FORM_ENTRIES.answer, answer || '');
+  params.append(GOOGLE_FORM_ENTRIES.correct, correct || '');
+  params.append(GOOGLE_FORM_ENTRIES.timestamp, new Date().toISOString());
+  // no-cors: the response is opaque (we can't read it), but the submission still goes through
+  fetch(GOOGLE_FORM_ACTION, { method: 'POST', mode: 'no-cors', body: params }).catch(()=>{});
+}
+
+/* ---------------- content (educational) pages, sourced from the teaching doc ---------------- */
+const CONTENT_PAGES = [
+  {
+    type: 'content',
+    tag: 'Foundations',
+    title: 'What is a PA Catheter?',
+    slides: [
+      {
+        heading: 'The basics',
+        emphasize: true,
+        bullets: [
+          'A pulmonary artery catheter — also called a <b>Swan-Ganz catheter</b>, or simply a "Swan" — is a long central line with a balloon at the tip.',
+          'The catheter has multiple ports, or holes, that can be used to measure the pressure of the cardiac chamber or vessel around them.'
+        ]
+      },
+      {
+        heading: 'How it gets there',
+        emphasize: true,
+        bullets: [
+          'The balloon at the end of the catheter is used to float the catheter through the right-sided chambers of the heart.',
+          'It starts in the vena cava, then advances into the right atrium, then the right ventricle, and finally the pulmonary artery.',
+          'The balloon then enters the "wedge" position, where it obstructs the pulmonary artery — yielding a measurement of the pulmonary capillary wedge pressure (PCWP).'
+        ]
+      },
+      {
+        heading: 'The waveform at each position',
+        emphasize: true,
+        bullets: [
+          'The waveform — the fluctuation in pressure with each cardiac cycle — is different at each of these positions, and that\'s what lets you tell them apart on the monitor.'
+        ],
+        diagram: true
+      },
+      {
+        heading: 'What it measures',
+        emphasize: true,
+        bullets: [
+          'The ports allow measurement of the right atrial pressure, RV pressures, pulmonary artery pressures, and PCWP.',
+          'PCWP is the pressure distal to the inflated balloon, and thus represents the pressure in the left atrium.'
+        ]
+      },
+      {
+        heading: 'Why it matters',
+        emphasize: true,
+        bullets: [
+          'The PAC can also be used to calculate cardiac output, cardiac index, pulmonary vascular resistance, and systemic vascular resistance.',
+          'Interpreting all of these measurements together lets us evaluate different etiologies of shock and estimate a patient\'s volume status.',
+          'These interpretations can directly affect management decisions — which is what the rest of this module walks through.'
+        ]
+      }
+    ],
+    questions: [
+      {
+        type: 'order',
+        prompt: 'Put the vessels/chambers the Swan\'s balloon floats through in order:',
+        items: ['Right Ventricle', 'Pulmonary Artery', 'SVC', 'Wedge position', 'Right atrium'],
+        correctOrder: ['SVC', 'Right atrium', 'Right Ventricle', 'Pulmonary Artery', 'Wedge position'],
+        feedbackGood: 'That\'s the path: SVC → right atrium → right ventricle → pulmonary artery → wedge. Each position has a signature waveform you\'ll use to confirm placement as you go.',
+        feedbackBad: 'Correct order: SVC → right atrium → right ventricle → pulmonary artery → wedge. The balloon is floated by venous return through the right heart chambers before wedging in a distal PA branch.'
+      },
+      {
+        type: 'mc',
+        prompt: 'What does the PCWP represent?',
+        options: [
+          { text: 'The systolic blood pressure in the aorta transmitted back through the pulmonary vasculature.', correct: false },
+          { text: 'The pressure of the left atrium transmitted back through the pulmonary vasculature.', correct: true },
+          { text: 'The MAP transmitted through the pulmonary vasculature.', correct: false }
+        ],
+        feedbackGood: 'Right. With the balloon wedged, the tip is shielded from forward pulmonary arterial flow, so it reads pressure transmitted backward from the left atrium — a surrogate for left-sided filling pressure.',
+        feedbackBad: 'PCWP is a left-atrial-pressure surrogate: with the balloon wedged and forward flow blocked, the tip senses pressure transmitted backward from the left atrium through the pulmonary vasculature.'
+      }
+    ]
+  },
+  {
+    type: 'content',
+    tag: 'Reference',
+    title: 'Definitions and Normal Values',
+    slides: [
+      {
+        heading: 'Cardiac output & index',
+        emphasize: true,
+        bullets: [
+          '<b>Cardiac Output (CO):</b> the amount of blood pumped by the heart per minute. Normal: <b>4–8 L/min</b>.',
+          '<b>Cardiac Index (CI):</b> cardiac output indexed to body surface area. Normal: <b>2.5–4.0 L/min/m²</b>.'
+        ]
+      },
+      {
+        heading: 'Vascular resistance',
+        emphasize: true,
+        bullets: [
+          '<b>PVR:</b> resistance in the pulmonary vasculature that the right side of the heart must pump across. (mPAP − PCWP) / CO. Normal: <b>&lt;120 dynes (1.5 Wood units)</b>.',
+          '<b>SVR:</b> resistance in the systemic vasculature that the left side of the heart must pump across. (MAP − RAP) / CO. Normal: <b>800–1600 dynes</b>.'
+        ]
+      },
+      {
+        heading: 'Chamber & vessel pressures',
+        emphasize: true,
+        bullets: [
+          '<b>RA pressure:</b> pressure in the right atrium. Normal: <b>0–6 mmHg</b>.',
+          '<b>PA pressures:</b> pressures in the pulmonary artery. Normal: <b>15–25 / 8–10 mmHg</b>, with a mean PAP of <b>10–20 mmHg</b>.',
+          '<b>PCWP:</b> pressure transmitted back through the pulmonary vasculature from the left atrium. Normal: <b>8–12 mmHg</b>.'
+        ]
+      },
+      {
+        heading: 'A memory trick',
+        emphasize: true,
+        bullets: [],
+        mnemonic: 'Nickel, quarter, dime: RA pressure is around 5 (nickel), PA pressures are around 25/10 (quarter/dime), and wedge pressure is around 10 (dime).'
+      }
+    ],
+    questions: []
+  },
+  {
+    type: 'content',
+    tag: 'Interpretation',
+    title: 'Physiologic Underpinnings of Abnormal Values',
+    slides: [
+      {
+        heading: 'Elevated RA pressure',
+        emphasize: true,
+        bullets: [
+          'An elevated RA pressure means the <b>RV filling pressure is elevated</b>. There are two broad reasons why.'
+        ],
+        numberedBullets: [
+          '<b>Volume overload</b> — there is too much fluid in the body.',
+          '<b>Impaired RV function</b> — the right side of the heart is not pumping well.'
+        ]
+      },
+      {
+        heading: 'Elevated RV systolic pressure',
+        emphasize: true,
+        bullets: [
+          'The RV must pump against a higher pressure — an increased <b>afterload</b>.',
+          'If <b>chronic</b> — as in pulmonary hypertension — the RV strengthens over time (hypertrophy), allowing it to generate higher systolic pressures.',
+          'If <b>acute</b> — as in a massive PE — the RV cannot generate sufficient pressure, leading to acute RV failure.'
+        ]
+      },
+      {
+        heading: 'Elevated PA pressure',
+        emphasize: true,
+        bullets: [
+          'An elevated PA pressure indicates one of two things.'
+        ],
+        numberedBullets: [
+          '<b>Increased resistance</b> through the pulmonary circulation, or',
+          '<b>Elevated left atrial pressure</b> that is transmitted backward into the pulmonary vasculature.'
+        ]
+      },
+      {
+        heading: 'Elevated PCWP',
+        emphasize: true,
+        bullets: [
+          'An elevated PCWP indicates <b>increased left ventricular filling pressure</b>. This can reflect either:'
+        ],
+        numberedBullets: [
+          '<b>LV dysfunction</b>, or',
+          '<b>Left-sided valvular disease</b> (mitral stenosis or regurgitation).'
+        ]
+      },
+      {
+        heading: 'Output and resistance',
+        emphasize: true,
+        bullets: [
+          '<b>Decreased CO/CI</b> — the heart is pumping less than the normal amount of blood; a core component of cardiogenic shock.',
+          '<b>Elevated PVR</b> — the right side of the heart must pump against high resistance; a core feature of both pre-capillary and post-capillary pulmonary hypertension.',
+          '<b>Elevated SVR</b> — the peripheral vasculature is "clamped down"; this can be a compensatory measure to maintain sufficient blood pressure during cardiogenic shock.'
+        ]
+      }
+    ],
+    questions: [
+      {
+        type: 'mc',
+        prompt: 'An elevated PCWP most directly indicates:',
+        options: [
+          { text: 'Increased left ventricular filling pressure, from LV dysfunction or left-sided valvular disease.', correct: true },
+          { text: 'Elevated right ventricular filling pressure from volume overload.', correct: false },
+          { text: 'Increased resistance through the pulmonary circulation.', correct: false },
+          { text: 'A "clamped down" peripheral vasculature.', correct: false }
+        ],
+        feedbackGood: 'Correct. PCWP is a surrogate for left atrial / LV filling pressure, so an elevated value points to increased LV filling pressure — classically from LV dysfunction or left-sided valvular disease such as mitral stenosis or regurgitation.',
+        feedbackBad: 'PCWP reflects left-sided filling pressure. An elevated value points to increased LV filling pressure — from LV dysfunction or left-sided valvular disease (mitral stenosis/regurgitation) — not right-sided, pulmonary-resistance, or systemic-resistance causes.'
+      },
+      {
+        type: 'mc',
+        prompt: 'A patient in cardiogenic shock has a low cardiac index and an elevated SVR. The high SVR most likely represents:',
+        options: [
+          { text: 'A compensatory response — the peripheral vasculature "clamps down" to help maintain blood pressure.', correct: true },
+          { text: 'Increased resistance in the pulmonary circulation the right heart must overcome.', correct: false },
+          { text: 'Elevated left atrial pressure transmitted back through the lungs.', correct: false },
+          { text: 'Volume overload raising the right ventricular filling pressure.', correct: false }
+        ],
+        feedbackGood: 'Right. SVR is the resistance the left heart pumps against. As cardiac output falls in cardiogenic shock, the periphery constricts ("clamps down") to defend perfusion pressure — so a high SVR here is a compensatory finding.',
+        feedbackBad: 'SVR reflects systemic (left-sided) afterload. When cardiac output falls in cardiogenic shock, the peripheral vasculature constricts — "clamps down" — to maintain blood pressure, so the elevated SVR in this setting is compensatory.'
+      }
+    ]
+  }
+];
+
+/* ---------------- clinical case scenarios ---------------- */
+const CASES = [
+  {
+    "id": 0,
+    "tag": "Interpretation · management",
+    "title": "Case 1 — Ms. Johnson",
+    "vignette": "You are pre-rounding on one of your CCU patients, <b>Ms. Johnson</b>, who is 75 years old and has a history of <b>HFrEF with an EF of 35%</b>. She presented with shortness of breath and dyspnea on exertion and was intubated for acute hypoxic respiratory failure. On exam, she is intubated, you hear <b>crackles in her lungs bilaterally</b>, her <b>JVP is elevated</b>, you hear <b>no murmurs</b>, and she has <b>2+ pitting edema</b>. Her creatinine is at her baseline of 1.1 mg/dL, her lactate is 1.5 mmol/L, and her extremities are warm with brisk capillary refill. You review her blood pressure and hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "70 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "16 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "45/12 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "45/25 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "26 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "4.0 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "2.5 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "1,080 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is high. Normal is 8–12 mm Hg (≤15 mm Hg). A PCWP of 26 indicates significantly elevated left-sided filling pressures, which is consistent with her clinical presentation of pulmonary congestion (bilateral crackles, respiratory failure) and systemic congestion (elevated JVP, peripheral edema).",
+        "feedbackBad": "The correct answer is: High. The PCWP is high. Normal is 8–12 mm Hg (≤15 mm Hg). A PCWP of 26 indicates significantly elevated left-sided filling pressures, which is consistent with her clinical presentation of pulmonary congestion (bilateral crackles, respiratory failure) and systemic congestion (elevated JVP, peripheral edema)."
+      },
+      {
+        "prompt": "Is the RA pressure high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The RA pressure is high. Normal is 2–6 mm Hg. An RA pressure of 16 indicates elevated right-sided filling pressures, which correlates with her elevated JVP on exam and peripheral edema. Together with the elevated PCWP, this confirms biventricular congestion.",
+        "feedbackBad": "The correct answer is: High. The RA pressure is high. Normal is 2–6 mm Hg. An RA pressure of 16 indicates elevated right-sided filling pressures, which correlates with her elevated JVP on exam and peripheral edema. Together with the elevated PCWP, this confirms biventricular congestion."
+      },
+      {
+        "prompt": "Is the CI high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": true
+          },
+          {
+            "text": "Low",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "The CI is low-normal/borderline low. Normal is 2.5–4.0 L/min/m². A CI of 2.5 is at the lower limit of normal, suggesting that while cardiac output is reduced, the patient still has adequate perfusion. This is also supported by her warm extremities, normal lactate, and stable creatinine. This is the hemodynamic profile of a \"warm and wet\" patient.",
+        "feedbackBad": "The correct answer is: Normal or Low. The CI is low-normal/borderline low. Normal is 2.5–4.0 L/min/m². A CI of 2.5 is at the lower limit of normal, suggesting that while cardiac output is reduced, the patient still has adequate perfusion. This is also supported by her warm extremities, normal lactate, and stable creatinine. This is the hemodynamic profile of a \"warm and wet\" patient."
+      },
+      {
+        "prompt": "What is the best next step in management?",
+        "options": [
+          {
+            "text": "IV diuresis and monitor perfusion markers",
+            "correct": true
+          },
+          {
+            "text": "Give fluid for concern for sepsis",
+            "correct": false
+          },
+          {
+            "text": "Start an inotrope",
+            "correct": false
+          },
+          {
+            "text": "Start an afterload-reducing agent",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "IV diuresis and monitor perfusion markers. The hemodynamic profile (adequate MAP, markedly elevated PCWP and RA pressure, borderline-low CI, and normal SVR) is consistent with a \"warm and wet\" presentation of acutely decompensated heart failure. The primary problem is volume overload/congestion, not inadequate perfusion. Her warm extremities, normal lactate, and stable creatinine all suggest that end-organ perfusion is currently maintained. IV diuresis (e.g., IV furosemide) is the appropriate first-line therapy to reduce filling pressures and relieve pulmonary and systemic congestion. Perfusion markers (lactate, creatinine, urine output, mental status) should be closely monitored during diuresis to ensure that cardiac output remains adequate as preload is reduced. Fluids would worsen congestion, an inotrope is not indicated when perfusion is adequate, and an afterload-reducing agent is not the primary intervention needed given a normal SVR and borderline-low MAP.",
+        "feedbackBad": "The correct answer is: IV diuresis and monitor perfusion markers. IV diuresis and monitor perfusion markers. The hemodynamic profile (adequate MAP, markedly elevated PCWP and RA pressure, borderline-low CI, and normal SVR) is consistent with a \"warm and wet\" presentation of acutely decompensated heart failure. The primary problem is volume overload/congestion, not inadequate perfusion. Her warm extremities, normal lactate, and stable creatinine all suggest that end-organ perfusion is currently maintained. IV diuresis (e.g., IV furosemide) is the appropriate first-line therapy to reduce filling pressures and relieve pulmonary and systemic congestion. Perfusion markers (lactate, creatinine, urine output, mental status) should be closely monitored during diuresis to ensure that cardiac output remains adequate as preload is reduced. Fluids would worsen congestion, an inotrope is not indicated when perfusion is adequate, and an afterload-reducing agent is not the primary intervention needed given a normal SVR and borderline-low MAP."
+      }
+    ]
+  },
+  {
+    "id": 1,
+    "tag": "Interpretation · management",
+    "title": "Case 2 — Mr. Davis",
+    "vignette": "You are pre-rounding one of your CCU patient, <b>Mr. Davis</b>, who is 62 years old and was admitted for an <b>NSTEMI</b> and cough. He underwent PCI to his LAD yesterday and was doing well until he developed hypotension overnight and was upgraded from the floor to the CCU. His right femoral arterial access site appears soft. His temperature is <b>38.5</b>, HR <b>115 bpm</b>, BP is <b>80/47</b>, SpO2 is 91% on RA, RR 26. On exam, his <b>extremities are warm</b>, he has <b>decreased breath sounds in the right base</b>, <b>JVP is flat</b>, and he has no peripheral edema. His lactate is <b>4.2 mmol/L</b> and WBC is <b>18,000</b>. You review his hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "58 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "4 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "28/2 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "28/10 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "8 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "7.5 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "3.8 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "576 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": true
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is normal. Normal is 8–12 mm Hg (≤15 mm Hg). A PCWP of 8 indicates that the patient is not overloaded.",
+        "feedbackBad": "The correct answer is: Normal. The PCWP is normal. Normal is 8–12 mm Hg (≤15 mm Hg). A PCWP of 8 indicates that the patient is not overloaded."
+      },
+      {
+        "prompt": "Is the SVR high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "The SVR is low. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 576 is consistent with pathologic vasodilation.",
+        "feedbackBad": "The correct answer is: Low. The SVR is low. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 576 is consistent with pathologic vasodilation."
+      },
+      {
+        "prompt": "Is the CO high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": true
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The CO is high normal. Normal is 4–8 L/min. Consider what etiology of shock has a high CO with a low SVR.",
+        "feedbackBad": "The correct answer is: Normal. The CO is high normal. Normal is 4–8 L/min. Consider what etiology of shock has a high CO with a low SVR."
+      },
+      {
+        "prompt": "What is the best next step in management?",
+        "options": [
+          {
+            "text": "IV diuresis",
+            "correct": false
+          },
+          {
+            "text": "IV fluid resuscitation and broad-spectrum antibiotics",
+            "correct": true
+          },
+          {
+            "text": "Start an inotrope",
+            "correct": false
+          },
+          {
+            "text": "Place an Impella",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "IV fluid resuscitation and broad-spectrum antibiotics. The hemodynamic profile (low MAP, low RA pressure, low-normal PCWP, high CO, and markedly low SVR) is classic for distributive (septic) shock. The patient likely has pneumonia given the decreased right basilar breath sounds, fever, tachycardia, and leukocytosis. Initial management includes volume resuscitation to optimize preload and empiric broad-spectrum antibiotics. If hypotension persists after adequate fluid resuscitation, a vasopressor (norepinephrine) should be initiated.",
+        "feedbackBad": "The correct answer is: IV fluid resuscitation and broad-spectrum antibiotics. IV fluid resuscitation and broad-spectrum antibiotics. The hemodynamic profile (low MAP, low RA pressure, low-normal PCWP, high CO, and markedly low SVR) is classic for distributive (septic) shock. The patient likely has pneumonia given the decreased right basilar breath sounds, fever, tachycardia, and leukocytosis. Initial management includes volume resuscitation to optimize preload and empiric broad-spectrum antibiotics. If hypotension persists after adequate fluid resuscitation, a vasopressor (norepinephrine) should be initiated."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "tag": "Interpretation · management",
+    "title": "Case 3 — Mr. Thompson",
+    "vignette": "You are pre-rounding on one of your CCU patient, <b>Mr. Thompson</b>, who is 58 years old with a history of <b>HFrEF with an EF of 20%</b> due to ischemic cardiomyopathy. He presented with progressive dyspnea and hypotension. On exam, he is awake but fatigued, his <b>extremities are cool</b>, his lungs have <b>diffuse crackles bilaterally</b>, his <b>JVP is elevated to the angle of the jaw</b>, and he has <b>3+ pitting edema</b>. His lactate is <b>3.8 mmol/L</b> and creatinine has risen from his baseline of 1.2 to <b>2.1 mg/dL</b>. He is currently on a <b>moderate dose of norepinephrine</b> to maintain his blood pressure. You review his hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "62 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "18 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "55/16 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "55/30 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "30 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "3.0 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "1.6 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "1,173 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the CI high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "The CI is low. Normal is 2.5–4.0 L/min/m². A CI of 1.6 indicates severely reduced cardiac output.",
+        "feedbackBad": "The correct answer is: Low. The CI is low. Normal is 2.5–4.0 L/min/m². A CI of 1.6 indicates severely reduced cardiac output."
+      },
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 30 indicates significant left-sided congestion and elevated LV filling pressures.",
+        "feedbackBad": "The correct answer is: High. The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 30 indicates significant left-sided congestion and elevated LV filling pressures."
+      },
+      {
+        "prompt": "Is the SVR high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": true
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The SVR is high-normal/borderline elevated. Normal is 800–1,200 dynes·s/cm⁵. In the setting of a severely reduced CI, the elevated SVR reflects compensatory vasoconstriction, which further increases afterload on an already failing ventricle.",
+        "feedbackBad": "The correct answer is: High or Normal. The SVR is high-normal/borderline elevated. Normal is 800–1,200 dynes·s/cm⁵. In the setting of a severely reduced CI, the elevated SVR reflects compensatory vasoconstriction, which further increases afterload on an already failing ventricle."
+      },
+      {
+        "prompt": "What is the best next step in management?",
+        "options": [
+          {
+            "text": "Give a 500 mL normal saline bolus",
+            "correct": false
+          },
+          {
+            "text": "Start IV diuresis alone",
+            "correct": false
+          },
+          {
+            "text": "Start an inotrope",
+            "correct": true
+          },
+          {
+            "text": "Start nitroprusside",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "Start an inotrope. The hemodynamic profile — low MAP, elevated PCWP, severely reduced CI, and elevated SVR — is classic \"cold and wet\" cardiogenic shock. The patient is already on a vasopressor and has signs of end-organ hypoperfusion (rising creatinine, elevated lactate, cool/mottled extremities). An inotrope will augment cardiac output thereby improving forward flow. Fluids would worsen congestion, diuresis alone would not address the low output state, and nitroprusside would risk worsening hypotension in a patient already requiring vasopressor support.",
+        "feedbackBad": "The correct answer is: Start an inotrope. Start an inotrope. The hemodynamic profile — low MAP, elevated PCWP, severely reduced CI, and elevated SVR — is classic \"cold and wet\" cardiogenic shock. The patient is already on a vasopressor and has signs of end-organ hypoperfusion (rising creatinine, elevated lactate, cool/mottled extremities). An inotrope will augment cardiac output thereby improving forward flow. Fluids would worsen congestion, diuresis alone would not address the low output state, and nitroprusside would risk worsening hypotension in a patient already requiring vasopressor support."
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "tag": "Interpretation · management",
+    "title": "Case 4 — Mrs. Patel",
+    "vignette": "You are pre-rounding on one of your CCU patients, <b>Mrs. Patel</b>, who is 70 years old with a history of long-standing hypertension and <b>HFpEF (last EF 55%)</b>. She presented with acute pulmonary edema and was intubated for respiratory failure. On exam, she is intubated and sedated, her blood pressure is <b>195/110</b>, her <b>extremities are cool</b>, her lungs have <b>diffuse crackles bilaterally</b>, her <b>JVP is elevated</b>, and she has <b>1+ pitting edema</b>. Her BNP is <b>1,800 pg/mL</b>. You review her hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "138 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "14 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "60/14 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "60/30 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "32 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "3.5 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "2.0 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "2,834 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the MAP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The MAP is high. Normal MAP is approximately 70–105 mm Hg. A MAP of 138 is significantly elevated.",
+        "feedbackBad": "The correct answer is: High. The MAP is high. Normal MAP is approximately 70–105 mm Hg. A MAP of 138 is significantly elevated."
+      },
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 32 indicates severe congestion.",
+        "feedbackBad": "The correct answer is: High. The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 32 indicates severe congestion."
+      },
+      {
+        "prompt": "Is the SVR high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The SVR is very high. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 2,834 reflects severe vasoconstriction, which is dramatically increasing afterload and impairing forward cardiac output.",
+        "feedbackBad": "The correct answer is: High. The SVR is very high. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 2,834 reflects severe vasoconstriction, which is dramatically increasing afterload and impairing forward cardiac output."
+      },
+      {
+        "prompt": "What is the best next step in management?",
+        "options": [
+          {
+            "text": "Give a fluid bolus",
+            "correct": false
+          },
+          {
+            "text": "Start an inotrope",
+            "correct": false
+          },
+          {
+            "text": "Start a vasodilator (e.g., nitroprusside)",
+            "correct": true
+          },
+          {
+            "text": "Place an Impella",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "Start a vasodilator (e.g., IV nitroprusside or nitroglycerin). The hemodynamic profile (markedly elevated MAP, elevated PCWP, reduced CI, and very high SVR) indicates that excessive afterload is the primary driver of this patient's low output state. Reducing SVR with a vasodilator will decrease afterload, improve forward flow, and lower filling pressures. An inotrope is not the best first choice here because the primary problem is afterload mismatch, not intrinsic pump failure. Fluids would worsen congestion, and mechanical support is not indicated when pharmacologic afterload reduction has not yet been attempted.",
+        "feedbackBad": "The correct answer is: Start a vasodilator (e.g., nitroprusside). Start a vasodilator (e.g., IV nitroprusside or nitroglycerin). The hemodynamic profile (markedly elevated MAP, elevated PCWP, reduced CI, and very high SVR) indicates that excessive afterload is the primary driver of this patient's low output state. Reducing SVR with a vasodilator will decrease afterload, improve forward flow, and lower filling pressures. An inotrope is not the best first choice here because the primary problem is afterload mismatch, not intrinsic pump failure. Fluids would worsen congestion, and mechanical support is not indicated when pharmacologic afterload reduction has not yet been attempted."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "tag": "Interpretation · management",
+    "title": "Case 5 — Mr. Garcia",
+    "vignette": "You are pre-rounding on one of your CCU patients, <b>Mr. Garcia</b>, who is 52 years old and presented with a <b>large anterior STEMI</b>. He underwent emergent PCI to a 95% occluded proximal LAD 12 hours ago. Despite successful revascularization, he has remained hypotensive. On exam, he is intubated, his <b>extremities are cold and mottled</b>. His lungs have <b>diffuse crackles</b>, his <b>JVP is markedly elevated</b>, and he is <b>anuric</b>. His lactate is <b>7.5 mmol/L and rising</b>, his creatinine is <b>3.4 mg/dL (baseline 0.9)</b>, and his LFTs are acutely elevated. He is currently on <b>norepinephrine at 15 mcg/min</b> and <b>dobutamine at 10 mcg/kg/min</b> (limited from further up-titration due to sustained runs of non-sustained ventricular tachycardia). You review his hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "55 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "20 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "50/18 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "50/28 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "28 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "2.8 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "1.4 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "1,000 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the CI high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "The CI is very low. Normal is 2.5–4.0 L/min/m². A CI of 1.4 indicates severely reduced cardiac output despite maximal tolerated inotropic support.",
+        "feedbackBad": "The correct answer is: Low. The CI is very low. Normal is 2.5–4.0 L/min/m². A CI of 1.4 indicates severely reduced cardiac output despite maximal tolerated inotropic support."
+      },
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 28 indicates significant congestion.",
+        "feedbackBad": "The correct answer is: High. The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 28 indicates significant congestion."
+      },
+      {
+        "prompt": "The patient is on maximally tolerated dobutamine (limited by ventricular arrhythmia) and high-dose norepinephrine, yet remains in refractory shock with worsening end-organ dysfunction. What is the best next step in management?",
+        "options": [
+          {
+            "text": "Increase the norepinephrine further",
+            "correct": false
+          },
+          {
+            "text": "Add a second inotrope",
+            "correct": false
+          },
+          {
+            "text": "Start IV diuresis",
+            "correct": false
+          },
+          {
+            "text": "Escalate to mechanical circulatory support (have an Impella placed)",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "Escalate to mechanical circulatory support (place an Impella). This patient has refractory cardiogenic shock: he remains profoundly hypotensive with a critically low CI, rising lactate, anuria, and liver injury despite maximally tolerated inotropic and vasopressor support. The AHA scientific statement on cardiogenic shock management recommends consideration of temporary mechanical circulatory support (tMCS) when pharmacologic therapy is insufficient to restore adequate perfusion. An Impella device directly unloads the left ventricle, augments cardiac output independent of native cardiac rhythm or contractility, and reduces myocardial oxygen demand — making it the appropriate next step in this post-STEMI patient with refractory LV-dominant shock. The Impella is preferred over IABP in this setting given the severity of shock and the need for more robust hemodynamic support.",
+        "feedbackBad": "The correct answer is: Escalate to mechanical circulatory support (have an Impella placed). Escalate to mechanical circulatory support (place an Impella). This patient has refractory cardiogenic shock: he remains profoundly hypotensive with a critically low CI, rising lactate, anuria, and liver injury despite maximally tolerated inotropic and vasopressor support. The AHA scientific statement on cardiogenic shock management recommends consideration of temporary mechanical circulatory support (tMCS) when pharmacologic therapy is insufficient to restore adequate perfusion. An Impella device directly unloads the left ventricle, augments cardiac output independent of native cardiac rhythm or contractility, and reduces myocardial oxygen demand — making it the appropriate next step in this post-STEMI patient with refractory LV-dominant shock. The Impella is preferred over IABP in this setting given the severity of shock and the need for more robust hemodynamic support."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "tag": "Interpretation · management",
+    "title": "Case 6 — Ms. Robinson",
+    "vignette": "You are pre-rounding on one of your CCU patients, <b>Ms. Robinson</b>, who is 64 years old with a history of <b>non-ischemic dilated cardiomyopathy with an EF of 15%</b> who was admitted with worsening heart failure symptoms. She has been on IV furosemide with good urine output, but overnight her nurse reports that her blood pressure has dropped, and she appears more fatigued. On exam, she is awake but drowsy, her <b>extremities are cool with delayed capillary refill</b>, her lungs have <b>bibasilar crackles</b>, her <b>JVP is elevated</b>, and she has <b>2+ pitting edema</b>. Her lactate is <b>2.8 mmol/L</b>. She is currently on <b>carvedilol 25 mg twice daily</b> at home. You review her hemodynamics in the comprehensive flowsheet which show:",
+    "data": [
+      {
+        "label": "MAP",
+        "val": "68 mmHg"
+      },
+      {
+        "label": "RA",
+        "val": "15 mmHg"
+      },
+      {
+        "label": "RV",
+        "val": "48/12 mmHg"
+      },
+      {
+        "label": "PA",
+        "val": "48/24 mmHg"
+      },
+      {
+        "label": "PCWP",
+        "val": "26 mmHg"
+      },
+      {
+        "label": "CO",
+        "val": "3.2 L/min"
+      },
+      {
+        "label": "CI",
+        "val": "1.8 L/min/m²"
+      },
+      {
+        "label": "SVR",
+        "val": "1,325 dyn·s/cm⁵"
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Is the CI high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": false
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": true
+          }
+        ],
+        "feedbackGood": "The CI is low. Normal is 2.5–4.0 L/min/m². A CI of 1.8 indicates reduced cardiac output consistent with cardiogenic shock.",
+        "feedbackBad": "The correct answer is: Low. The CI is low. Normal is 2.5–4.0 L/min/m². A CI of 1.8 indicates reduced cardiac output consistent with cardiogenic shock."
+      },
+      {
+        "prompt": "Is the SVR high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The SVR is elevated. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 1,325 reflects compensatory vasoconstriction that is increasing afterload on the failing ventricle.",
+        "feedbackBad": "The correct answer is: High. The SVR is elevated. Normal is 800–1,200 dynes·s/cm⁵. An SVR of 1,325 reflects compensatory vasoconstriction that is increasing afterload on the failing ventricle."
+      },
+      {
+        "prompt": "Is the PCWP high, normal, or low?",
+        "options": [
+          {
+            "text": "High",
+            "correct": true
+          },
+          {
+            "text": "Normal",
+            "correct": false
+          },
+          {
+            "text": "Low",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 26 indicates elevated LV filling pressures and congestion.",
+        "feedbackBad": "The correct answer is: High. The PCWP is high. Normal is 8–12 mm Hg. A PCWP of 26 indicates elevated LV filling pressures and congestion."
+      },
+      {
+        "prompt": "What is the best next step in management?",
+        "options": [
+          {
+            "text": "Increase the IV furosemide rate",
+            "correct": false
+          },
+          {
+            "text": "Start dobutamine",
+            "correct": false
+          },
+          {
+            "text": "Start milrinone",
+            "correct": true
+          },
+          {
+            "text": "Start nitroprusside",
+            "correct": false
+          }
+        ],
+        "feedbackGood": "Start milrinone. The hemodynamic profile — borderline low MAP, elevated PCWP, reduced CI, and elevated SVR — is consistent with \"cold and wet\" cardiogenic shock. Milrinone is the preferred inotrope in this case for several important reasons. First, this patient is on carvedilol, a beta-blocker, which blunts the effectiveness of dobutamine (a beta-receptor agonist), whereas milrinone works via phosphodiesterase-3 inhibition and is independent of beta-adrenergic receptors. Second, milrinone acts as an inodilator. This means it will both augment contractility and reduce SVR through vasodilation, addressing the elevated afterload. Finally, the patient has pulmonary hypertension (PA pressure 48/24), and milrinone has favorable effects on reducing pulmonary vascular resistance. Diuresis alone would not address the low output state, and nitroprusside, while it would reduce afterload, would not provide the needed inotropic support.",
+        "feedbackBad": "The correct answer is: Start milrinone. Start milrinone. The hemodynamic profile — borderline low MAP, elevated PCWP, reduced CI, and elevated SVR — is consistent with \"cold and wet\" cardiogenic shock. Milrinone is the preferred inotrope in this case for several important reasons. First, this patient is on carvedilol, a beta-blocker, which blunts the effectiveness of dobutamine (a beta-receptor agonist), whereas milrinone works via phosphodiesterase-3 inhibition and is independent of beta-adrenergic receptors. Second, milrinone acts as an inodilator. This means it will both augment contractility and reduce SVR through vasodilation, addressing the elevated afterload. Finally, the patient has pulmonary hypertension (PA pressure 48/24), and milrinone has favorable effects on reducing pulmonary vascular resistance. Diuresis alone would not address the low output state, and nitroprusside, while it would reduce afterload, would not provide the needed inotropic support."
+      }
+    ]
+  }
+];
+
+const UPCOMING = [];
+
+/* four-panel catheter position / waveform / normal-values figure, generated to match the module's own waveform paths and theme colors */
+const ANATOMY = {
+  ra:    { tip:'M95,4 L78,38 L72,52',                             cx:72,  cy:52, color:'var(--ra)' },
+  rv:    { tip:'M95,4 L78,38 L72,52 L62,98',                      cx:62,  cy:98, color:'var(--rv)' },
+  pa:    { tip:'M95,4 L78,38 L72,52 L62,98 L80,80 L100,42',       cx:100, cy:42, color:'var(--pa)' },
+  wedge: { tip:'M95,4 L78,38 L72,52 L62,98 L80,80 L100,42 L91,13',cx:91,  cy:13, color:'var(--wedge)' },
+};
+function heart(tx, key){
+  const a = ANATOMY[key];
+  const balloon = key==='wedge'
+    ? '<path d="M91,13 C89,9 88,6 87,3" fill="none" stroke="var(--text-faint)" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.5"/>'
+    : '';
+  return `<g transform="translate(${tx},14)">`
+    + '<line x1="95" y1="4" x2="78" y2="38" stroke="var(--text-faint)" stroke-width="3" stroke-linecap="round"/>'
+    + '<ellipse cx="72" cy="52" rx="20" ry="18" fill="var(--panel-2)" stroke="var(--text-faint)" stroke-width="1"/>'
+    + '<ellipse cx="62" cy="98" rx="26" ry="24" fill="var(--panel-2)" stroke="var(--text-faint)" stroke-width="1"/>'
+    + '<path d="M80,80 C92,68 98,55 102,40" fill="none" stroke="var(--text-faint)" stroke-width="8" stroke-linecap="round"/>'
+    + '<path d="M100,38 C94,26 92,18 90,10" fill="none" stroke="var(--text-faint)" stroke-width="5" stroke-linecap="round"/>'
+    + '<path d="M104,39 C114,30 122,24 130,19" fill="none" stroke="var(--text-faint)" stroke-width="5" stroke-linecap="round"/>'
+    + '<ellipse cx="126" cy="56" rx="14" ry="13" fill="var(--border-soft)" stroke="var(--border)" stroke-width="1"/>'
+    + '<ellipse cx="118" cy="101" rx="19" ry="23" fill="var(--border-soft)" stroke="var(--border)" stroke-width="1"/>'
+    + '<path d="M118,78 C118,55 108,30 96,8" fill="none" stroke="var(--border)" stroke-width="3" stroke-linecap="round"/>'
+    + balloon
+    + `<path d="${a.tip}" fill="none" stroke="var(--text-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`
+    + `<circle cx="${a.cx}" cy="${a.cy}" r="10" fill="${a.color}" opacity="0.28"/>`
+    + `<circle cx="${a.cx}" cy="${a.cy}" r="6" fill="${a.color}" stroke="var(--bg-page)" stroke-width="1"/>`
+    + '</g>';
+}
+
+// ---- beat model -------------------------------------------------------
+// Diastolic-floor "nodes" are the pressure at each beat boundary. They are
+// chosen so region boundaries sit on a nadir and floors ramp smoothly:
+//   RA  ~3      (gentle a/v waves)
+//   RV  ~1-2    (tall systole, low floor)     <- boundary nadir into PA
+//   PA  1.8->9  (first beat climbs off the RV nadir, then floor steps UP to ~9)
+//   Wed ~9      (damped a/v waves)
+function paBeats(BOUNDS){
+  const regions = [
+    { key:'ra',    xa:BOUNDS[0], xb:BOUNDS[1], type:'av',      amp:1.7, nodes:[3.5,3.4,3.2,3.0] },
+    { key:'rv',    xa:BOUNDS[1], xb:BOUNDS[2], type:'systole', peak:25, nodes:[3.0,1.3,1.3,1.8] },
+    { key:'pa',    xa:BOUNDS[2], xb:BOUNDS[3], type:'systole', peak:25, dicrotic:true, nodes:[1.8,9,9,9] },
+    { key:'wedge', xa:BOUNDS[3], xb:BOUNDS[4], type:'av',      amp:2.0, nodes:[9,9,9,9,9] },
+  ];
+  const beats = [];
+  regions.forEach(r=>{
+    const n = r.nodes.length - 1;
+    const bw = (r.xb - r.xa) / n;
+    for(let j=0;j<n;j++){
+      beats.push({
+        region:r.key, type:r.type, peak:r.peak, amp:r.amp, dicrotic:r.dicrotic,
+        x0:r.xa + j*bw, x1:r.xa + (j+1)*bw,
+        Ts:r.nodes[j], Te:r.nodes[j+1]
+      });
+    }
+  });
+  return beats;
+}
+function beatPressure(b, p){
+  const baseline = b.Ts + (b.Te - b.Ts) * p;          // diastolic floor ramp
+  if(b.type === 'systole'){
+    const pulse = Math.exp(-Math.pow((p - 0.16)/0.072, 2));
+    let v = baseline + (b.peak - baseline) * pulse;
+    if(b.dicrotic) v += 2.1 * Math.exp(-Math.pow((p - 0.34)/0.045, 2)); // dicrotic notch shoulder
+    return v;
+  }
+  // 'av' — two gentle humps (a wave, v wave), ~0 at the beat edges
+  const wave = b.amp * ( 0.95*Math.exp(-Math.pow((p-0.28)/0.13,2))
+                       + 0.75*Math.exp(-Math.pow((p-0.66)/0.15,2)) );
+  return baseline + wave;
+}
+
+// sample the whole strip into colored, stitched segments
+function paWaveSegments(BOUNDS, yFor, step){
+  const beats = paBeats(BOUNDS);
+  const order = { ra:0, rv:1, pa:2, wedge:3 };
+  const X0 = BOUNDS[0], X1 = BOUNDS[4];
+  const segs = { ra:[], rv:[], pa:[], wedge:[] };
+  let bi = 0, prev = null, prevRegion = null;
+  for(let x = X0; x <= X1 + 1e-6; x += step){
+    const xi = Math.min(x, X1 - 1e-6);
+    while(bi < beats.length-1 && xi >= beats[bi].x1) bi++;
+    const b = beats[bi];
+    const p = Math.max(0, Math.min(1, (xi - b.x0)/(b.x1 - b.x0)));
+    const pt = [ +x.toFixed(2), +yFor(beatPressure(b, p)).toFixed(2) ];
+    if(b.region !== prevRegion && prev) segs[b.region].push(prev); // stitch across boundary
+    segs[b.region].push(pt);
+    prev = pt; prevRegion = b.region;
+  }
+  return ['ra','rv','pa','wedge'].map(k => ({
+    region:k,
+    d: segs[k].map((pt,i)=> (i===0?'M':'L') + pt[0] + ',' + pt[1]).join(' ')
+  }));
+}
+
+const COLORS = { ra:'var(--ra)', rv:'var(--rv)', pa:'var(--pa)', wedge:'var(--wedge)' };
+
+// ---- the big four-panel figure ---------------------------------------
+function positionWaveformDiagram(){
+  const X0 = 16, X1 = 708;
+  const BOUNDS = [16, 187, 362, 537, 708];
+  const P_TOP = 32, P_BOT = -3, Y_TOP = 214, Y_BOT = 360;
+  const yFor = p => Y_BOT - (p - P_BOT) / (P_TOP - P_BOT) * (Y_BOT - Y_TOP);
+
+  const segsArr = paWaveSegments(BOUNDS, yFor, 1.2);
+  const wavePaths = segsArr.map(s =>
+    `<path d="${s.d}" fill="none" stroke="${COLORS[s.region]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+  ).join('');
+
+  let grid = '';
+  [0,10,20,30].forEach(pp=>{
+    const y = yFor(pp).toFixed(2);
+    grid += `<line x1="${X0}" y1="${y}" x2="${X1}" y2="${y}" stroke="var(--border-soft)" stroke-width="1" stroke-dasharray="2 4" opacity="0.7"/>`;
+    grid += `<text x="${X1+4}" y="${(+y+3).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--text-faint)">${pp}</text>`;
+  });
+  grid += `<text x="${X1+4}" y="${(yFor(30)-8).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--text-faint)">mmHg</text>`;
+
+  let dividers = '';
+  [187,362,537].forEach(x=>{
+    dividers += `<line x1="${x}" y1="8" x2="${x}" y2="${Y_BOT}" stroke="var(--border-soft)" stroke-width="1"/>`;
+  });
+
+  const centers = [99.5, 274.5, 449.5, 624.5];
+  const labels = [
+    { name:'Right atrium',    color:'var(--ra)',    vals:['2–6 mmHg'] },
+    { name:'Right ventricle', color:'var(--rv)',    vals:['20–30 / 0–5 mmHg'] },
+    { name:'Pulmonary artery',color:'var(--pa)',    vals:['20–30 / 6–15 mmHg','mean 10–20 mmHg'] },
+    { name:'Wedge position',  color:'var(--wedge)', vals:['4–12 mmHg (PCWP)'] },
+  ];
+  let text = '';
+  labels.forEach((l,i)=>{
+    text += `<text x="${centers[i]}" y="168" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600" fill="${l.color}">${l.name}</text>`;
+    l.vals.forEach((v,vi)=>{
+      text += `<text x="${centers[i]}" y="${186 + vi*14}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--text-dim)">${v}</text>`;
+    });
+  });
+
+  const hearts = heart(12,'ra') + heart(187,'rv') + heart(362,'pa') + heart(537,'wedge');
+  return `<svg viewBox="0 0 740 372" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;">`
+    + hearts + dividers + text + grid + wavePaths + `</svg>`;
+}
+
+const CONTENT_COUNT = CONTENT_PAGES.length;
+const CASE_COUNT = CASES.length;
+const TOTAL_NODES = CONTENT_COUNT + CASE_COUNT + UPCOMING.length;
+const TOTAL_INTERACTIVE = CONTENT_COUNT + CASE_COUNT; // items that can actually be completed right now
+
+function itemType(i){
+  if(i < CONTENT_COUNT) return 'content';
+  if(i < CONTENT_COUNT + CASE_COUNT) return 'case';
+  return 'locked';
+}
+function getItem(i){
+  if(i < CONTENT_COUNT) return CONTENT_PAGES[i];
+  if(i < CONTENT_COUNT + CASE_COUNT) return CASES[i - CONTENT_COUNT];
+  return UPCOMING[i - CONTENT_COUNT - CASE_COUNT];
+}
+function caseNumber(i){ return (i - CONTENT_COUNT) + 1; } // numbering used for case/locked nodes
+
+const STORAGE_KEY = 'pa-catheter-progress';
+let state = { completed: {} };
+
+const stationsEl = document.getElementById('stations');
+const caseArea = document.getElementById('caseArea');
+
+function waveformPath(type){
+  const shapes = {
+    ra:  { d: 'M0,55 C10,50 18,40 24,42 C30,44 34,54 40,54 C46,54 50,44 56,42 C62,40 70,50 80,55 C90,50 98,40 104,42 C110,44 114,54 120,54 C126,54 130,44 136,42 C142,40 150,50 160,55', color: 'var(--ra)' },
+    rv:  { d: 'M0,55 L6,55 C10,55 12,15 18,15 C24,15 24,50 30,52 L58,52 L64,55 C68,55 70,15 76,15 C82,15 82,50 88,52 L116,52 L122,55 C126,55 128,15 134,15 C140,15 140,50 146,52 L160,55', color: 'var(--rv)' },
+    pa:  { d: 'M0,55 L6,55 C9,55 11,18 17,17 C22,16 25,24 28,32 C31,38 34,40 40,40 C48,40 54,55 64,55 L70,55 C73,55 75,18 81,17 C86,16 89,24 92,32 C95,38 98,40 104,40 C112,40 118,55 128,55 L160,55', color: 'var(--pa)' },
+    wedge: { d: 'M0,50 C8,48 14,36 20,38 C26,40 28,48 34,50 C42,52 46,44 52,44 C58,44 60,50 68,50 C76,48 82,36 88,38 C94,40 96,48 102,50 C110,52 114,44 120,44 C126,44 128,50 136,50 C144,48 150,36 156,38 C160,39 160,44 160,44', color: 'var(--wedge)' }
+  };
+  return shapes[type];
+}
+
+function waveformSvg(type, w){
+  const shape = waveformPath(type);
+  const colorMap = { ra:'#4FC3E8', rv:'#3FD98A', pa:'#F0A93B', wedge:'#E37FB0' };
+  return `<svg viewBox="0 0 160 60" preserveAspectRatio="none" style="height:70px;">
+    <line x1="0" y1="55" x2="160" y2="55" stroke="#1B2426" stroke-width="1"/>
+    <path d="${shape.d}" fill="none" stroke="${colorMap[type]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+async function loadState(){
+  try{
+    const r = await window.storage.get(STORAGE_KEY, false);
+    if(r && r.value) state = JSON.parse(r.value);
+  }catch(e){ state = { completed: {} }; }
+}
+
+async function saveState(){
+  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+  catch(e){ console.error('storage save failed', e); }
+}
+
+function totalDone(){ return Object.keys(state.completed).length; }
+
+function renderStations(){
+  stationsEl.innerHTML = '<div class="connector"></div>';
+  for(let i=0;i<TOTAL_NODES;i++){
+    const type = itemType(i);
+    const interactive = (type === 'content' || type === 'case');
+    const done = interactive && state.completed[i];
+    const isCurrent = interactive && !done && (i===0 || state.completed[i-1]);
+    const locked = !interactive;
+    const div = document.createElement('div');
+    div.className = 'station' + (type==='content' ? ' content' : '') + (done?' done':'') + (isCurrent?' current':'') + (locked?' locked':'');
+    let label;
+    if(type === 'content') label = getItem(i).title;
+    else if(type === 'case') label = getItem(i).title.split('—')[0].trim();
+    else label = `Case ${caseNumber(i)}`;
+    div.innerHTML = `<div class="node">${done?'✓':(type==='content' ? (i+1) : caseNumber(i))}</div><div class="station-label">${label}</div>`;
+    if(interactive){ div.addEventListener('click', ()=> renderItem(i)); }
+    stationsEl.appendChild(div);
+  }
+  document.getElementById('completionText').textContent = `${totalDone()} / ${TOTAL_INTERACTIVE} complete`;
+  document.getElementById('barFill').style.width = (totalDone() / TOTAL_INTERACTIVE * 100) + '%';
+}
+
+function renderItem(i){
+  const type = itemType(i);
+  if(type === 'locked'){
+    const u = getItem(i);
+    caseArea.innerHTML = `<div class="card locked-card">
+      <div class="lt">${u.tag}</div>
+      <div class="ld">${u.title}<br><span style="color:var(--text-faint)">Content coming soon.</span></div>
+    </div>`;
+    return;
+  }
+  if(type === 'content'){ renderContentPage(i); return; }
+  renderCase(i);
+}
+
+function renderThankYou(){
+  caseArea.innerHTML = `<div class="card thankyou-card">
+    <p class="thankyou-title">Thank you for completing the learning module!</p>
+    <p class="thankyou-sub">If you have any questions, concerns, or suggestions about the module, or want to work on this project or one similar, reach out to Nate Sacks at <a href="mailto:nathan.sacks@tuftsmedicalcenter.org">nathan.sacks@tuftsmedicalcenter.org</a>.</p>
+  </div>`;
+}
+
+function goNext(i){
+  if(i+1 < TOTAL_NODES){ renderItem(i+1); return; }
+  renderThankYou();
+}
+
+/* ---------------- clinical case rendering (unchanged behavior) ---------------- */
+function renderCase(i){
+  const c = getItem(i);
+  let html = `<div class="card">
+    <div class="case-tag">${c.tag}</div>
+    <p class="case-title">${c.title}</p>
+    <p class="vignette">${c.vignette}</p>`;
+
+  if(c.waveform){
+    html += `<div class="waveform-box"><div class="wlabel">Pressure trace</div>${waveformSvg(c.waveform)}</div>`;
+  }
+  if(c.data){
+    html += `<div class="data-grid">${c.data.map(d=>`<div class="data-cell"><div class="dlabel">${d.label}</div><div class="dval">${d.val}</div></div>`).join('')}</div>`;
+  }
+
+  // support either a single legacy question or a `questions` array (multi-part cases)
+  const questions = c.questions || [{ prompt: c.question, options: c.options, feedbackGood: c.feedbackGood, feedbackBad: c.feedbackBad }];
+  const multi = questions.length > 1;
+
+  questions.forEach((q, qi)=>{
+    html += `${(multi && qi>0) ? '<hr class="qdivider">' : ''}<div class="qblock">
+      ${multi ? `<p class="qlabel" style="color:var(--pa);">Question ${qi+1} of ${questions.length}</p>` : ''}
+      <p class="qtext">${q.prompt}</p>
+      <div class="options" id="opts-${i}-${qi}">
+        ${q.options.map((o,idx)=>`<label class="opt" data-idx="${idx}"><input type="radio" name="q${i}-${qi}" value="${idx}"><span>${o.text}</span></label>`).join('')}
+      </div>
+      <button class="checkBtn" id="check-${i}-${qi}">Check answer</button>
+      <div class="feedback" id="fb-${i}-${qi}"></div>
+    </div>`;
+  });
+
+  html += `<button class="nextBtn" id="next-${i}">Next case →</button>
+  </div>`;
+
+  caseArea.innerHTML = html;
+
+  const checkedArr = questions.map(()=> false);
+  const nextBtn = document.getElementById(`next-${i}`);
+
+  async function maybeComplete(){
+    if(checkedArr.every(Boolean)){
+      nextBtn.classList.add('show');
+      state.completed[i] = true;
+      await saveState();
+      renderStations();
+    }
+  }
+
+  questions.forEach((q, qi)=>{
+    const optsWrap = document.getElementById(`opts-${i}-${qi}`);
+    const checkBtn = document.getElementById(`check-${i}-${qi}`);
+    const fb = document.getElementById(`fb-${i}-${qi}`);
+    checkBtn.addEventListener('click', async ()=>{
+      const selected = optsWrap.querySelector('input:checked');
+      if(!selected) return;
+      const idx = parseInt(selected.value);
+      const isCorrect = q.options[idx].correct;
+      optsWrap.querySelectorAll('.opt').forEach((el,oi)=>{
+        el.classList.add('disabled');
+        el.querySelector('input').disabled = true;
+        if(q.options[oi].correct) el.classList.add('correct');
+        else if(oi===idx) el.classList.add('incorrect');
+      });
+      fb.className = 'feedback show ' + (isCorrect ? 'good' : 'bad');
+      fb.innerHTML = `<b>${isCorrect ? 'Correct' : 'Not quite'}</b>${isCorrect ? q.feedbackGood : q.feedbackBad}`;
+      checkBtn.style.display = 'none';
+      checkedArr[qi] = true;
+      submitToGoogleForm({ item: c.title, question: q.prompt, answer: q.options[idx].text, correct: isCorrect ? 'Correct' : 'Incorrect' });
+      await maybeComplete();
+    });
+  });
+
+  nextBtn.addEventListener('click', ()=> goNext(i));
+}
+
+/* ---------------- educational content-page rendering (slide deck + comprehension check) ---------------- */
+function renderContentPage(i){
+  const page = getItem(i);
+  let slideIdx = 0;
+  let phase = 'slides'; // 'slides' -> 'questions' -> done
+  const qState = page.questions.map(q => ({
+    checked: false,
+    // order-question working state
+    sequence: q.type === 'order' ? [] : null
+  }));
+
+  function allQuestionsChecked(){
+    return page.questions.length === 0 || qState.every(q => q.checked);
+  }
+
+  function draw(){
+    let html = `<div class="card">
+      <div class="case-tag content-tag">${page.title}</div>`;
+
+    if(phase === 'slides'){
+      const s = page.slides[slideIdx];
+      html += `<p class="slide-heading${s.emphasize ? ' slide-heading-lg' : ''}">${s.heading}</p>`;
+      if(s.bullets && s.bullets.length){
+        html += `<ul class="bullet-list">${s.bullets.map(b=>`<li>${b}</li>`).join('')}</ul>`;
+      }
+      if(s.numberedBullets && s.numberedBullets.length){
+        html += `<ol class="numbered-list">${s.numberedBullets.map(b=>`<li>${b}</li>`).join('')}</ol>`;
+      }
+      if(s.mnemonic){
+        html += `<div class="mnemonic-box">${s.mnemonic}</div>`;
+      }
+      if(s.diagram){
+        html += `<div class="waveform-box" style="padding:16px 8px 12px;">${positionWaveformDiagram()}</div>`;
+      }
+      html += `<div class="slide-dots">${page.slides.map((_,di)=>`<div class="dot ${di===slideIdx?'active':(di<slideIdx?'past':'')}"></div>`).join('')}</div>`;
+      html += `<div class="slide-nav">
+        <button class="slide-btn" id="prevSlide" ${slideIdx===0?'disabled':''}>← Back</button>
+        <span class="slide-counter">${slideIdx+1} / ${page.slides.length}</span>
+        <button class="slide-btn primary" id="nextSlide">${slideIdx===page.slides.length-1 ? (page.questions.length ? 'Check your understanding →' : 'Continue →') : 'Next →'}</button>
+      </div>`;
+    } else {
+      // questions phase
+      page.questions.forEach((q, qi)=>{
+        html += `<hr class="qdivider"><div class="qblock">
+          <p class="qlabel">Confirm understanding</p>
+          <p class="qtext">${q.prompt}</p>`;
+        if(q.type === 'mc'){
+          html += `<div class="options" id="opts-${i}-${qi}">
+            ${q.options.map((o,idx)=>`<label class="opt" data-idx="${idx}"><input type="radio" name="q${i}-${qi}" value="${idx}"><span>${o.text}</span></label>`).join('')}
+          </div>
+          <button class="checkBtn" id="check-${i}-${qi}">Check answer</button>
+          <div class="feedback" id="fb-${i}-${qi}"></div>`;
+        } else if(q.type === 'order'){
+          const st = qState[qi];
+          const remaining = q.items.filter(item => !st.sequence.includes(item));
+          html += `<div class="order-pool" id="pool-${i}-${qi}">
+            ${remaining.map(item=>`<div class="order-chip" data-item="${item}">${item}</div>`).join('')}
+          </div>
+          <div class="order-sequence" id="seq-${i}-${qi}">
+            ${st.sequence.map((item,pos)=>`<div class="order-slot ${st.checked ? (q.correctOrder[pos]===item?'correct':'incorrect') : ''} ${st.checked?'locked':''}" data-item="${item}"><span class="num">${pos+1}</span>${item}</div>`).join('')}
+          </div>
+          <button class="clearBtn" id="clear-${i}-${qi}" ${st.checked || st.sequence.length===0 ?'disabled':''}>Clear</button>
+          <button class="checkBtn" id="check-${i}-${qi}" ${st.sequence.length===q.items.length && !st.checked ? '' : 'disabled'} style="${st.checked?'display:none;':''}">Check order</button>
+          <div class="feedback" id="fb-${i}-${qi}"></div>`;
+        }
+        html += `</div>`;
+      });
+      html += `<button class="continueBtn ${allQuestionsChecked() ? 'show':''}" id="continueBtn">Continue →</button>`;
+    }
+
+    html += `</div>`;
+    caseArea.innerHTML = html;
+    wire();
+  }
+
+  function wire(){
+    if(phase === 'slides'){
+      const prevBtn = document.getElementById('prevSlide');
+      const nextBtn = document.getElementById('nextSlide');
+      if(prevBtn) prevBtn.addEventListener('click', ()=>{ if(slideIdx>0){ slideIdx--; draw(); } });
+      nextBtn.addEventListener('click', async ()=>{
+        if(slideIdx < page.slides.length-1){ slideIdx++; draw(); return; }
+        if(page.questions.length){ phase = 'questions'; draw(); return; }
+        // no questions on this page — mark complete immediately
+        state.completed[i] = true;
+        await saveState();
+        renderStations();
+        goNext(i);
+      });
+      return;
+    }
+
+    // questions phase wiring
+    page.questions.forEach((q, qi)=>{
+      const st = qState[qi];
+      if(q.type === 'mc'){
+        const optsWrap = document.getElementById(`opts-${i}-${qi}`);
+        const checkBtn = document.getElementById(`check-${i}-${qi}`);
+        const fb = document.getElementById(`fb-${i}-${qi}`);
+        if(st.checked){
+          const correctIdx = q.options.findIndex(o=>o.correct);
+          optsWrap.querySelectorAll('.opt').forEach((el,oi)=>{
+            el.classList.add('disabled');
+            el.querySelector('input').disabled = true;
+            if(q.options[oi].correct) el.classList.add('correct');
+          });
+          checkBtn.style.display = 'none';
+          fb.className = 'feedback show ' + (st.wasCorrect ? 'good' : 'bad');
+          fb.innerHTML = `<b>${st.wasCorrect ? 'Correct' : 'Not quite'}</b>${st.wasCorrect ? q.feedbackGood : q.feedbackBad}`;
+          return;
+        }
+        checkBtn.addEventListener('click', ()=>{
+          const selected = optsWrap.querySelector('input:checked');
+          if(!selected) return;
+          const idx = parseInt(selected.value);
+          st.checked = true;
+          st.wasCorrect = q.options[idx].correct;
+          submitToGoogleForm({ item: page.title, question: q.prompt, answer: q.options[idx].text, correct: st.wasCorrect ? 'Correct' : 'Incorrect' });
+          draw();
+        });
+      } else if(q.type === 'order'){
+        const poolEl = document.getElementById(`pool-${i}-${qi}`);
+        const seqEl = document.getElementById(`seq-${i}-${qi}`);
+        const clearBtn = document.getElementById(`clear-${i}-${qi}`);
+        const checkBtn = document.getElementById(`check-${i}-${qi}`);
+        const fb = document.getElementById(`fb-${i}-${qi}`);
+
+        if(!st.checked){
+          poolEl.querySelectorAll('.order-chip').forEach(chip=>{
+            chip.addEventListener('click', ()=>{
+              st.sequence.push(chip.getAttribute('data-item'));
+              draw();
+            });
+          });
+          seqEl.querySelectorAll('.order-slot').forEach(slot=>{
+            slot.addEventListener('click', ()=>{
+              const item = slot.getAttribute('data-item');
+              const pos = st.sequence.indexOf(item);
+              if(pos > -1) st.sequence.splice(pos,1);
+              draw();
+            });
+          });
+          clearBtn.addEventListener('click', ()=>{ st.sequence = []; draw(); });
+          checkBtn.addEventListener('click', ()=>{
+            st.checked = true;
+            st.wasCorrect = q.correctOrder.every((item,pos)=> st.sequence[pos] === item);
+            submitToGoogleForm({ item: page.title, question: q.prompt, answer: st.sequence.join(' → '), correct: st.wasCorrect ? 'Correct' : 'Incorrect' });
+            draw();
+          });
+        } else {
+          fb.className = 'feedback show ' + (st.wasCorrect ? 'good' : 'bad');
+          fb.innerHTML = `<b>${st.wasCorrect ? 'Correct' : 'Not quite'}</b>${st.wasCorrect ? q.feedbackGood : q.feedbackBad}`;
+        }
+      }
+    });
+
+    const continueBtn = document.getElementById('continueBtn');
+    if(continueBtn && allQuestionsChecked()){
+      continueBtn.addEventListener('click', async ()=>{
+        state.completed[i] = true;
+        await saveState();
+        renderStations();
+        goNext(i);
+      });
+    }
+  }
+
+  draw();
+}
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  state = { completed: {} };
+  await saveState();
+  renderStations();
+  renderItem(0);
+});
+
+/* ---------------- learner ID gate ---------------- */
+const LEARNER_KEY = 'pa-catheter-learner-id';
+let learnerId = null;
+
+async function startApp(){
+  await loadState();
+  renderStations();
+  let firstIncomplete = -1;
+  for(let k=0;k<TOTAL_INTERACTIVE;k++){ if(!state.completed[k]){ firstIncomplete = k; break; } }
+  if(firstIncomplete === -1){ renderThankYou(); return; }
+  renderItem(firstIncomplete);
+}
+
+function showApp(){
+  document.getElementById('gateScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = '';
+}
+
+document.getElementById('gateStartBtn').addEventListener('click', async ()=>{
+  const input = document.getElementById('learnerIdInput');
+  const errorEl = document.getElementById('gateError');
+  const val = input.value.trim();
+  if(!val){
+    errorEl.textContent = 'Please enter your name to continue.';
+    return;
+  }
+  errorEl.textContent = '';
+  learnerId = val;
+  try{ await window.storage.set(LEARNER_KEY, learnerId, false); }
+  catch(e){ console.error('learner id save failed', e); }
+  submitToGoogleForm({ item: 'Module started', question: '', answer: '', correct: '' });
+  showApp();
+  await startApp();
+});
+
+(async function initGate(){
+  try{
+    const r = await window.storage.get(LEARNER_KEY, false);
+    if(r && r.value) learnerId = r.value;
+  }catch(e){ learnerId = null; }
+
+  if(learnerId){
+    showApp();
+    await startApp();
+  }
+  // otherwise the gate screen (visible by default) waits for the Start button
+})();
+</script>
+</body>
+</html>
